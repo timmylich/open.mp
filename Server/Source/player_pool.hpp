@@ -269,7 +269,7 @@ struct PlayerPool final : public IPlayerPool, public NetworkEventHandler, public
 					return false;
 				}
 
-				if (!peer.areWeaponsAllowed() && (0 < onPlayerGiveTakeDamageRPC.WeaponID && onPlayerGiveTakeDamageRPC.WeaponID <= 46))
+				if (!peer.areWeaponsAllowed()/* && (0 < onPlayerGiveTakeDamageRPC.WeaponID && onPlayerGiveTakeDamageRPC.WeaponID <= 46)*/)
 				{
 					// They were shooting and shouldn't be.
 					return false;
