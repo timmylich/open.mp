@@ -456,7 +456,10 @@ public:
 
 		if (vehicle)
 		{
-			++preloadModels[data.modelID - 400];
+			if (data.modelID >= 400 && data.modelID < 400 + MAX_VEHICLE_MODELS)
+			{
+				++preloadModels[data.modelID - 400];
+			}
 
 			static bool delay_warn = false;
 			if (!delay_warn && data.respawnDelay == Seconds(0))
@@ -481,7 +484,10 @@ public:
 		IVehicle* vehicle = storage.get(vehicleId);
 		if (vehicle)
 		{
-			++preloadModels[data.modelID - 400];
+			if (data.modelID >= 400 && data.modelID < 400 + MAX_VEHICLE_MODELS)
+			{
+				++preloadModels[data.modelID - 400];
+			}
 
 			static bool delay_warn = false;
 			if (!delay_warn && data.respawnDelay == Seconds(0))
@@ -526,7 +532,11 @@ public:
 				for (IVehicle* c : vehicle.getCarriages())
 				{
 					Vehicle* carriage = static_cast<Vehicle*>(c);
-					--preloadModels[carriage->getModel() - 400];
+					int carriageModel = carriage->getModel();
+					if (carriageModel >= 400 && carriageModel < 400 + MAX_VEHICLE_MODELS)
+					{
+						--preloadModels[carriageModel - 400];
+					}
 					carriage->destream();
 					storage.release(carriage->poolID, false);
 				}
@@ -556,7 +566,10 @@ public:
 				return;
 			}
 
-			--preloadModels[veh_model - 400];
+			if (veh_model >= 400 && veh_model < 400 + MAX_VEHICLE_MODELS)
+			{
+				--preloadModels[veh_model - 400];
+			}
 			vehiclePtr->destream();
 			storage.release(index, false);
 		}
