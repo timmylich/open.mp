@@ -678,11 +678,12 @@ struct PlayerPool final : public IPlayerPool, public NetworkEventHandler, public
 
 			Player& player = static_cast<Player&>(peer);
 
-			auto slot = WeaponSlotData(footSync.Weapon).slot();
-			if (slot == INVALID_WEAPON_SLOT)
-			{
-				return false;
-			}
+			// Don't drop the whole foot sync (position, keys, health, ...)
+			// just because the currently armed weapon ID isn't one of the
+			// standard SA-MP weapons - custom weapon IDs are legitimate here
+			// too, and rejecting every packet made the player appear frozen
+			// (dropped out of sync -> looks AFK) to everyone else for as long
+			// as they kept holding one.
 
 			footSync.PlayerID = player.poolID;
 			footSync.Rotation *= player.rotTransform_;
@@ -1129,11 +1130,12 @@ struct PlayerPool final : public IPlayerPool, public NetworkEventHandler, public
 				return false;
 			}
 
-			auto slot = WeaponSlotData(vehicleSync.WeaponID).slot();
-			if (slot == INVALID_WEAPON_SLOT)
-			{
-				return false;
-			}
+			// Don't drop the whole sync packet (position, keys, health, ...)
+			// just because the reported driveby weapon ID isn't one of the
+			// standard SA-MP weapons - custom weapon IDs are legitimate here
+			// too, and rejecting the packet made the player appear frozen
+			// (dropped out of sync -> looks AFK) to everyone else for as long
+			// as they kept aiming with one.
 
 			ScopedPoolReleaseLock lock(*self.vehiclesComponent, *vehiclePtr);
 			IVehicle& vehicle = *lock.entry;
@@ -1384,11 +1386,8 @@ struct PlayerPool final : public IPlayerPool, public NetworkEventHandler, public
 				return false;
 			}
 
-			auto slot = WeaponSlotData(passengerSync.WeaponID).slot();
-			if (slot == INVALID_WEAPON_SLOT)
-			{
-				return false;
-			}
+			// See the comment in PlayerVehicleSyncHandler - an unrecognised
+			// driveby weapon ID must not drop the whole passenger sync.
 
 			ScopedPoolReleaseLock lock(*self.vehiclesComponent, *vehiclePtr);
 			IVehicle& vehicle = *lock.entry;
