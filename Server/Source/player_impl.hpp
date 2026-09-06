@@ -1270,12 +1270,15 @@ public:
 
 	void giveWeapon(WeaponSlotData weapon) override
 	{
+		// `slot()` only recognises the standard SA-MP weapon IDs; it returns
+		// INVALID_WEAPON_SLOT for anything else (e.g. custom weapon IDs used
+		// by modified clients).  That's fine when weapons aren't allowed and
+		// we have nowhere to cache the slot for later, but it must not stop
+		// the give-weapon RPC from reaching the client when weapons *are*
+		// allowed - the client (or its mods) is free to do what it wants
+		// with an ID we don't recognise.
 		auto slot = weapon.slot();
-		if (slot == INVALID_WEAPON_SLOT)
-		{
-			// Fail.
-		}
-		else if (areWeaponsAllowed())
+		if (areWeaponsAllowed())
 		{
 			// Set from sync
 			NetCode::RPC::GivePlayerWeapon givePlayerWeaponRPC;
@@ -1283,7 +1286,7 @@ public:
 			givePlayerWeaponRPC.Ammo = weapon.ammo;
 			PacketHelper::send(givePlayerWeaponRPC, *this);
 		}
-		else
+		else if (slot != INVALID_WEAPON_SLOT)
 		{
 			// We need to record this manually for later.
 			weapons_[slot] = weapon;
@@ -1335,13 +1338,10 @@ removeWeapon_has_weapon:
 
 	void setWeaponAmmo(WeaponSlotData weapon) override
 	{
-		// Set from sync
+		// See the comment in giveWeapon() - an unrecognised/custom weapon ID
+		// must still reach the client when weapons are allowed.
 		auto slot = weapon.slot();
-		if (slot == INVALID_WEAPON_SLOT)
-		{
-			// Fail.
-		}
-		else if (areWeaponsAllowed())
+		if (areWeaponsAllowed())
 		{
 			// Set from sync
 			NetCode::RPC::SetPlayerAmmo setPlayerAmmoRPC;
@@ -1349,7 +1349,7 @@ removeWeapon_has_weapon:
 			setPlayerAmmoRPC.Ammo = weapon.ammo;
 			PacketHelper::send(setPlayerAmmoRPC, *this);
 		}
-		else
+		else if (slot != INVALID_WEAPON_SLOT)
 		{
 			// We need to record this manually for later.
 			weapons_[slot] = weapon;

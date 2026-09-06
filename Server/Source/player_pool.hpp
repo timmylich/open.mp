@@ -478,11 +478,7 @@ struct PlayerPool final : public IPlayerPool, public NetworkEventHandler, public
 						{
 							continue;
 						}
-						//if (weapons[i].id <= 18 || (weapons[i].id >= 22 && weapons[i].id <= 46))
-						else
-						{
-							peer.giveWeapon(weapons[i]);
-						}
+						peer.giveWeapon(weapons[i]);
 					}
 				}
 
