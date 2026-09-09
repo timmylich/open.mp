@@ -600,7 +600,11 @@ OMP_CAPI(NPC_GetEnteringVehicleSeat, int(objectPtr npc))
 OMP_CAPI(NPC_IsEnteringVehicle, bool(objectPtr npc))
 {
 	POOL_ENTITY_RET(npcs, INPC, npc, npc_, false);
-	return npc_->getEnteringVehicle() && npc_->getVehicleSeat() != SEAT_NONE;
+	// BUGFIX (main-repo, not a submodule file): getVehicleSeat() is the seat
+	// the NPC currently occupies and stays SEAT_NONE for the whole entry, so
+	// this reported false during exactly the window it is asked about. Same
+	// fix as the Pawn native in Pawn/Scripting/NPC/Natives.cpp.
+	return npc_->getEnteringVehicle() && npc_->getEnteringVehicleSeat() != SEAT_NONE;
 }
 
 OMP_CAPI(NPC_UseVehicleSiren, bool(objectPtr npc, bool use))

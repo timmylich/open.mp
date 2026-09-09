@@ -658,7 +658,13 @@ SCRIPT_API(NPC_GetEnteringVehicleSeat, int(INPC& npc))
 
 SCRIPT_API(NPC_IsEnteringVehicle, bool(INPC& npc))
 {
-	return npc.getEnteringVehicle() && npc.getVehicleSeat() != SEAT_NONE;
+	// BUGFIX (main-repo, not a submodule file): the second half read
+	// getVehicleSeat() - the seat the NPC is *currently sitting in* - which is
+	// SEAT_NONE for the entire time it is walking to a vehicle and playing the
+	// entry animation. So this native returned false throughout the whole
+	// entry, i.e. exactly when a script asks "is it getting in?". The seat that
+	// belongs to a pending entry is getEnteringVehicleSeat().
+	return npc.getEnteringVehicle() && npc.getEnteringVehicleSeat() != SEAT_NONE;
 }
 
 SCRIPT_API(NPC_UseVehicleSiren, bool(INPC& npc, bool use))
