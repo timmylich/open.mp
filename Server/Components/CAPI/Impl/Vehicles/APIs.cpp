@@ -11,7 +11,12 @@
 #include <Server/Components/Vehicles/vehicle_models.hpp>
 #include <Server/Components/Vehicles/vehicle_colours.hpp>
 #include <Server/Components/Vehicles/vehicle_seats.hpp>
-#include <Server/Components/Vehicles/vehicle_seats_fix.hpp>
+// Not <Server/Components/Vehicles/vehicle_seats_fix.hpp> - that angle-bracket
+// form only resolves through -I../SDK/include (the SDK vendors a mirrored
+// Server/Components/... tree under SDK/include/ for exactly this include
+// style); this header lives in the real Server/Components/Vehicles/ of the
+// main repo, which isn't on that include path, so it needs a relative include.
+#include "../../../Vehicles/vehicle_seats_fix.hpp"
 
 OMP_CAPI(Vehicle_Create, objectPtr(int modelid, float x, float y, float z, float rotation, int color1, int color2, int respawnDelay, bool addSiren, int* id))
 {
