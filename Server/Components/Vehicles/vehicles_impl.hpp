@@ -9,6 +9,7 @@
 #pragma once
 
 #include "vehicle.hpp"
+#include "vehicle_seats_fix.hpp"
 #include <Server/Components/Vehicles/vehicle_components.hpp>
 #include <Server/Components/Vehicles/vehicle_models.hpp>
 #include <Server/Components/Vehicles/vehicles.hpp>
@@ -189,7 +190,7 @@ private:
 
 			case VehicleSCMEvent_AddComponent:
 			{
-				if (!isValidComponentForVehicleModel(vehicle.getModel(), scmEvent.Arg1))
+				if (!isValidComponentForVehicleModelFixed(vehicle.getModel(), scmEvent.Arg1))
 				{
 					break;
 				}

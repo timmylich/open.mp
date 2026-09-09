@@ -331,7 +331,7 @@ OMP_CAPI(Vehicle_GetComponentType, int(int componentid))
 
 OMP_CAPI(Vehicle_CanHaveComponent, bool(int modelid, int componentid))
 {
-	return Impl::isValidComponentForVehicleModel(modelid, componentid);
+	return isValidComponentForVehicleModelFixed(modelid, componentid);
 }
 
 OMP_CAPI(Vehicle_GetRandomColorPair, bool(int modelid, int* color1, int* color2, int* color3, int* color4))

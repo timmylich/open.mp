@@ -290,7 +290,7 @@ SCRIPT_API(GetVehicleComponentType, int(int componentid))
 
 SCRIPT_API(VehicleCanHaveComponent, bool(int modelid, int componentid))
 {
-	return Impl::isValidComponentForVehicleModel(modelid, componentid);
+	return isValidComponentForVehicleModelFixed(modelid, componentid);
 }
 
 SCRIPT_API(GetRandomCarColPair, bool(int modelid, int& colour1, int& colour2, int& colour3, int& colour4))

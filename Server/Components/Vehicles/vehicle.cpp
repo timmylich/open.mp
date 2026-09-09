@@ -506,7 +506,7 @@ void Vehicle::addComponent(int component)
 		return;
 	}
 
-	if (!isValidComponentForVehicleModel(spawnData.modelID, component))
+	if (!isValidComponentForVehicleModelFixed(spawnData.modelID, component))
 	{
 		return;
 	}

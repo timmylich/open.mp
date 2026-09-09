@@ -10,6 +10,9 @@
 #include <sdk.hpp>
 #include "npcs_impl.hpp"
 #include <Server/Components/Vehicles/vehicle_models.hpp>
+// Main-repo (non-submodule) fallback for Impl::getVehicleModelInfo() - see
+// vehicle_seats_fix.hpp for why getVehicleSeatPos() below needs it.
+#include "../Vehicles/vehicle_seats_fix.hpp"
 #define _USE_MATH_DEFINES
 #include <math.h>
 
@@ -601,16 +604,21 @@ inline float getAngleOfLine(float x, float y)
 
 inline Vector3 getVehicleSeatPos(IVehicle& vehicle, int seatId)
 {
-	// Get the seat position
+	// Get the seat position. Uses the *Fixed() wrapper, not
+	// Impl::getVehicleModelInfo() directly - the SDK function leaves
+	// seatPosFromModelInfo completely uninitialised for any vehicle model it
+	// doesn't recognise (e.g. this server's custom 27000+ models), which
+	// then gets used as a real world position below. See
+	// Server/Components/Vehicles/vehicle_seats_fix.hpp for the full story.
 	Vector3 seatPosFromModelInfo;
 
 	if (seatId == 0 || seatId == 1)
 	{
-		Impl::getVehicleModelInfo(vehicle.getModel(), VehicleModelInfo_FrontSeat, seatPosFromModelInfo);
+		getVehicleModelInfoFixed(vehicle.getModel(), VehicleModelInfo_FrontSeat, seatPosFromModelInfo);
 	}
 	else
 	{
-		Impl::getVehicleModelInfo(vehicle.getModel(), VehicleModelInfo_RearSeat, seatPosFromModelInfo);
+		getVehicleModelInfoFixed(vehicle.getModel(), VehicleModelInfo_RearSeat, seatPosFromModelInfo);
 	}
 
 	// Adjust the seat vector
