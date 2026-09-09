@@ -11,6 +11,7 @@
 #include <Server/Components/Vehicles/vehicle_models.hpp>
 #include <Server/Components/Vehicles/vehicle_colours.hpp>
 #include <Server/Components/Vehicles/vehicle_seats.hpp>
+#include <Server/Components/Vehicles/vehicle_seats_fix.hpp>
 #include <sdk.hpp>
 
 SCRIPT_API(CreateVehicle, int(int modelid, Vector3 pos, float rotation, int colour1, int colour2, int respawnDelay))
@@ -36,7 +37,7 @@ SCRIPT_API(CreateVehicle, int(int modelid, Vector3 pos, float rotation, int colo
 
 SCRIPT_API(GetVehicleSeats, int(int modelid))
 {
-	return Impl::getVehiclePassengerSeats(modelid);
+	return getVehiclePassengerSeatsFixed(modelid);
 }
 
 SCRIPT_API(DestroyVehicle, bool(IVehicle& vehicle))
@@ -662,7 +663,7 @@ SCRIPT_API_FAILRET(GetVehicleOccupant, INVALID_PLAYER_ID, int(IVehicle& vehicle,
 
 SCRIPT_API(GetVehicleMaxPassengers, int(int model))
 {
-	return Impl::getVehiclePassengerSeats(model);
+	return getVehiclePassengerSeatsFixed(model);
 }
 
 SCRIPT_API(CountVehicleOccupants, int(IVehicle& vehicle))

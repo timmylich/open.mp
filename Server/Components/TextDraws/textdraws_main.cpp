@@ -12,11 +12,29 @@
 
 using namespace Impl;
 
+// Local (main-repo, non-submodule) override of the SDK's
+// PLAYER_TEXTDRAW_POOL_SIZE (SDK/include/values.hpp, still 256 there - the
+// vendored constant is left untouched on purpose, see
+// .claude/memory/openmp_migration_bugs.md). PLAYER_TEXTDRAW_POOL_SIZE is
+// only ever consumed here (the storage pool's size template argument, one
+// line below), so redefining it under a local name and using that instead is
+// enough to raise the limit without editing the submodule.
+//
+// NOTE: 256 is documented as the classic SA-MP client's hard, compiled-in
+// per-player textdraw limit (docs/open.mp/scripting/resources/limits.md,
+// "Created Serverwise (Per-Player)"). Raising the SERVER's pool only helps if
+// the client build actually in use also supports more than 256 - confirm
+// that on the live client before relying on ids >= 256 actually rendering.
+// The concrete bug that originally motivated trying this (open.mp inventory/
+// admin-spectate textdraws not rendering) turned out to be unrelated - see
+// openmp_migration_bugs.md - so this raise may not be load-bearing any more.
+constexpr int LOCAL_PLAYER_TEXTDRAW_POOL_SIZE = 1024;
+
 class PlayerTextDrawData final : public IPlayerTextDrawData
 {
 private:
 	IPlayer& player;
-	MarkedPoolStorage<PlayerTextDraw, IPlayerTextDraw, 0, PLAYER_TEXTDRAW_POOL_SIZE> storage;
+	MarkedPoolStorage<PlayerTextDraw, IPlayerTextDraw, 0, LOCAL_PLAYER_TEXTDRAW_POOL_SIZE> storage;
 	bool selecting;
 
 public:

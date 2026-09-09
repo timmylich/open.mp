@@ -8,6 +8,7 @@
 
 #include "vehicle.hpp"
 #include "vehicles_impl.hpp"
+#include "vehicle_seats_fix.hpp"
 #include <Server/Components/Vehicles/vehicle_components.hpp>
 #include <Server/Components/Vehicles/vehicle_seats.hpp>
 
@@ -385,7 +386,7 @@ bool Vehicle::updateFromPassengerSync(const VehiclePassengerSyncPacket& passenge
 		return false;
 	}
 	// Only do heavy processing if switching vehicle or switching between driver and passenger
-	int passengerSeats = Impl::getVehiclePassengerSeats(getModel());
+	int passengerSeats = getVehiclePassengerSeatsFixed(getModel());
 	// TODO: Deal with two players in the same seat.
 	// TODO: Detect fast switching cheats.
 	if (passengerSeats == 0xFF || passengerSync.SeatID < 1 || passengerSync.SeatID > passengerSeats)

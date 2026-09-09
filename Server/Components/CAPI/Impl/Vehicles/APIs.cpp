@@ -11,6 +11,7 @@
 #include <Server/Components/Vehicles/vehicle_models.hpp>
 #include <Server/Components/Vehicles/vehicle_colours.hpp>
 #include <Server/Components/Vehicles/vehicle_seats.hpp>
+#include <Server/Components/Vehicles/vehicle_seats_fix.hpp>
 
 OMP_CAPI(Vehicle_Create, objectPtr(int modelid, float x, float y, float z, float rotation, int color1, int color2, int respawnDelay, bool addSiren, int* id))
 {
@@ -52,7 +53,7 @@ OMP_CAPI(Vehicle_GetID, int(objectPtr vehicle))
 
 OMP_CAPI(Vehicle_GetMaxPassengerSeats, int(int modelid))
 {
-	int seats = Impl::getVehiclePassengerSeats(modelid);
+	int seats = getVehiclePassengerSeatsFixed(modelid);
 	return seats;
 }
 

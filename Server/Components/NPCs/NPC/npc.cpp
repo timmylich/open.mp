@@ -16,6 +16,7 @@
 #include "../Playback/playback.hpp"
 #include "../Node/node.hpp"
 #include <Server/Components/Vehicles/vehicle_seats.hpp>
+#include <Server/Components/Vehicles/vehicle_seats_fix.hpp>
 
 NPC::NPC(NPCComponent* component, IPlayer* playerPtr)
 	: footSyncSkipUpdate_(0)
@@ -1438,7 +1439,7 @@ void NPC::enterVehicle(IVehicle& vehicle, uint8_t seatId, NPCMoveType moveType)
 		moveType = NPCMoveType_Jog;
 	}
 
-	int passengerSeats = Impl::getVehiclePassengerSeats(vehicle.getModel());
+	int passengerSeats = getVehiclePassengerSeatsFixed(vehicle.getModel());
 	if (passengerSeats == 0xFF || (seatId > passengerSeats))
 	{
 		return;
@@ -1528,7 +1529,7 @@ bool NPC::putInVehicle(IVehicle& vehicle, uint8_t seat)
 		spawn();
 	}
 
-	auto maxPassengerSeats = getVehiclePassengerSeats(vehicle.getModel());
+	auto maxPassengerSeats = getVehiclePassengerSeatsFixed(vehicle.getModel());
 	if (seat > maxPassengerSeats || maxPassengerSeats == 0xFF)
 	{
 		return false;
