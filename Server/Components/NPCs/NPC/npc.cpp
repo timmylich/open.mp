@@ -341,6 +341,11 @@ void NPC::spawn()
 	vehicle_ = nullptr;
 	vehicleSeat_ = SEAT_NONE;
 	enteringVehicle_ = false;
+	// BUGFIX (main-repo, not a submodule file): exitingVehicle_ was the only
+	// vehicle flag this reset missed. A spawn while an exit was pending left it
+	// set, and tick() then called removeFromVehicle() 1500 ms into the new life
+	// - ejecting an NPC that had just been placed in a vehicle.
+	exitingVehicle_ = false;
 	vehicleToEnter_ = nullptr;
 	vehicleSeatToEnter_ = SEAT_NONE;
 	jackingVehicle_ = false;
@@ -435,7 +440,14 @@ bool NPC::move(Vector3 pos, NPCMoveType moveType, float moveSpeed, float stopRan
 		return false;
 	}
 
-	if (moveType != NPCMoveType_Drive && player_->getState() == PlayerState_Driver)
+	// BUGFIX (main-repo, not a submodule file): a passenger has to leave the
+	// vehicle before it can walk anywhere, exactly like a driver. Only the
+	// driver case was handled, so an NPC passenger told to move kept vehicle_
+	// and vehicleSeat_ set: it went on sending passenger sync from inside the
+	// car while advance() walked its position away, and stayed "seated" as far
+	// as every other check was concerned.
+	if (moveType != NPCMoveType_Drive
+		&& (player_->getState() == PlayerState_Driver || player_->getState() == PlayerState_Passenger))
 	{
 		removeFromVehicle();
 	}
@@ -1529,7 +1541,32 @@ void NPC::enterVehicle(IVehicle& vehicle, uint8_t seatId, NPCMoveType moveType)
 
 void NPC::exitVehicle()
 {
+	// BUGFIX (main-repo, not a submodule file): cancel any pending entry.
+	// "Get out" and "get in" were tracked by two independent sets of state,
+	// and exiting left the entry state untouched - so an NPC told to enter and
+	// then to exit (or told to exit while still walking to the car) would be
+	// seated again by the entry-completion branch in tick(), or walked back to
+	// the car by the vehicleToEnter_ check after a move finishes. From the
+	// outside that looks exactly like "the NPC gets out and is immediately put
+	// back in".
+	enteringVehicle_ = false;
+	jackingVehicle_ = false;
+	vehicleToEnter_ = nullptr;
+	vehicleSeatToEnter_ = SEAT_NONE;
+
 	if (player_->getState() != PlayerState_Driver && player_->getState() != PlayerState_Passenger)
+	{
+		return;
+	}
+
+	// BUGFIX (main-repo, not a submodule file): an exit already in progress
+	// must not be restarted. tick() only completes the exit once 1500 ms have
+	// passed since vehicleEnterExitUpdateTime_, and every call to this
+	// function reset that stamp - so a caller polling faster than 1.5 s (the
+	// gamemode's fakeplayer timer runs every second, the taxi job's poll every
+	// 500 ms) pushed the deadline back forever and the NPC never actually got
+	// out.
+	if (exitingVehicle_)
 	{
 		return;
 	}
@@ -1561,6 +1598,17 @@ bool NPC::putInVehicle(IVehicle& vehicle, uint8_t seat)
 		return false;
 	}
 
+	// BUGFIX (main-repo, not a submodule file): drop any pending exit/entry.
+	// Without this, a putInVehicle() issued while an exit was still counting
+	// down got undone ~1.5 s later by tick()'s exit branch calling
+	// removeFromVehicle() - the NPC was seated and then silently thrown back
+	// out, with nothing in the script having asked for it.
+	exitingVehicle_ = false;
+	enteringVehicle_ = false;
+	jackingVehicle_ = false;
+	vehicleToEnter_ = nullptr;
+	vehicleSeatToEnter_ = SEAT_NONE;
+
 	setPositionHandled(vehicle.getPosition(), true);
 	vehicle.putPlayer(*player_, seat);
 	vehicle_ = &vehicle;
@@ -1581,6 +1629,21 @@ bool NPC::removeFromVehicle()
 	{
 		return false;
 	}
+
+	// BUGFIX (main-repo, not a submodule file): once we are actually out of a
+	// vehicle, no enter/exit request may still be pending. This function is
+	// reached from several places that are not the exit branch of tick() -
+	// setPosition(), move(), respawn(), the death handler and the
+	// NPC_RemoveFromVehicle() native - and none of them used to clear this
+	// state, so a leftover enteringVehicle_/vehicleToEnter_ would put the NPC
+	// straight back into the vehicle a couple of seconds later. Placed after
+	// the !vehicle_ guard above on purpose: enterVehicle() sets vehicleToEnter_
+	// and then calls move(), and that pending entry must survive.
+	enteringVehicle_ = false;
+	exitingVehicle_ = false;
+	jackingVehicle_ = false;
+	vehicleToEnter_ = nullptr;
+	vehicleSeatToEnter_ = SEAT_NONE;
 
 	Vector3 seatPos;
 	auto vehicleData = queryExtension<IPlayerVehicleData>(player_);
@@ -2777,6 +2840,35 @@ void NPC::tick(Microseconds elapsed, TimePoint now)
 						}
 					}
 
+					// BUGFIX (main-repo, not a submodule file): keep position_
+					// tracking the vehicle while riding as a passenger.
+					// position_ is only ever assigned by the constructor,
+					// setPosition(), setVehiclePosition() and advance() - none
+					// of which run for a seated passenger - so getPosition()
+					// kept returning the spot where the NPC boarded, however
+					// far the vehicle then drove. Every distance check against
+					// an NPC passenger was therefore wrong, including
+					// followingPlayer_ below and any script-side check via
+					// NPC_GetPosition.
+					//
+					// Concretely, this is what made a fakeplayer bounce in and
+					// out of its owner's car forever: the gamemode's
+					// FakePlayer_OnSecondTimer sees the (stale) distance grow
+					// past its threshold and calls NPC_SetPosition, which goes
+					// through NPC::setPosition() -> removeFromVehicle(), i.e.
+					// it ejects the NPC; a second later the same timer sees an
+					// on-foot NPC next to a driving owner and puts it straight
+					// back in, freezing position_ again.
+					//
+					// Drivers are deliberately excluded: for a driver the NPC's
+					// own position IS the authority (advance() moves it and the
+					// driver sync feeds the vehicle from it), so copying the
+					// vehicle back onto it would fight the movement code.
+					if (vehicle_ && vehicleSeat_ != SEAT_NONE && vehicleSeat_ != 0)
+					{
+						position_ = vehicle_->getPosition();
+					}
+
 					if (needsVelocityUpdate_)
 					{
 						setPositionHandled(getPosition() + velocity_, false);
@@ -2883,7 +2975,18 @@ void NPC::tick(Microseconds elapsed, TimePoint now)
 							}
 						}
 
-						if (enteringVehicle_)
+						// BUGFIX (main-repo, not a submodule file): the
+						// !exitingVehicle_ half of this condition. Entering and
+						// exiting share a single timestamp
+						// (vehicleEnterExitUpdateTime_) but are two independent
+						// flags read by two independent branches of this tick,
+						// so with both set the exit completed at 1500 ms and
+						// the entry then completed at 2500 ms and teleported
+						// the NPC straight back into the vehicle it had just
+						// stepped out of. exitVehicle() now clears the entry
+						// state outright; this guard makes that mutual
+						// exclusion explicit rather than implied.
+						if (enteringVehicle_ && !exitingVehicle_)
 						{
 							if (duration_cast<Milliseconds>(now - vehicleEnterExitUpdateTime_).count() > (jackingVehicle_ ? 5800 : 2500))
 							{
