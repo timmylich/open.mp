@@ -7,6 +7,7 @@
  */
 
 #include "actor.hpp"
+#include "../../Source/weapon_id_fix.hpp"
 #include <Server/Components/Fixes/fixes.hpp>
 #include <utils.hpp>
 
@@ -42,7 +43,10 @@ private:
 				return false;
 			}
 
-			if (!IsWeaponForTakenDamageValid(onPlayerDamageActorRPC.WeaponID))
+			// weapon_id_fix.hpp: without this a client-mod weapon ID (100+)
+			// could never damage an actor - same vanilla-only weapon table
+			// restriction as the player damage RPCs in player_pool.hpp.
+			if (!isWeaponForTakenDamageValidFixed(onPlayerDamageActorRPC.WeaponID))
 			{
 				return false;
 			}

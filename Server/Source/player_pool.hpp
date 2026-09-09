@@ -9,6 +9,7 @@
 #pragma once
 
 #include "player_impl.hpp"
+#include "weapon_id_fix.hpp"
 #include <Server/Components/Console/console.hpp>
 #include <Server/Components/NPCs/npcs.hpp>
 #include <utils.hpp>
@@ -223,7 +224,10 @@ struct PlayerPool final : public IPlayerPool, public NetworkEventHandler, public
 						return false;
 					}
 
-					if (!IsWeaponForTakenDamageValid(onPlayerGiveTakeDamageRPC.WeaponID))
+					// weapon_id_fix.hpp: the SDK version rejects every weapon ID
+					// outside the base-game table, so a client-mod weapon
+					// (100+) could never report taken damage.
+					if (!isWeaponForTakenDamageValidFixed(onPlayerGiveTakeDamageRPC.WeaponID))
 					{
 						return false;
 					}
@@ -263,7 +267,12 @@ struct PlayerPool final : public IPlayerPool, public NetworkEventHandler, public
 					return false;
 				}
 
-				auto slot = WeaponSlotData(onPlayerGiveTakeDamageRPC.WeaponID).slot();
+				// weapon_id_fix.hpp - THE root cause of "custom weapons deal no
+				// damage": this RPC carries the real weapon ID (unlike the
+				// bullet-sync packet, whose weapon byte the gamemode rewrites
+				// to 24), so every shot with a client-mod weapon ID was dropped
+				// here and OnPlayerGiveDamage never fired for it.
+				auto slot = getWeaponSlotFixed(onPlayerGiveTakeDamageRPC.WeaponID);
 				if (slot == INVALID_WEAPON_SLOT)
 				{
 					return false;
@@ -937,7 +946,12 @@ struct PlayerPool final : public IPlayerPool, public NetworkEventHandler, public
 
 			Player& player = static_cast<Player&>(peer);
 
-			if (!WeaponSlotData { bulletSync.WeaponID }.shootable())
+			// weapon_id_fix.hpp: accept client-mod weapon IDs here too. The
+			// gamemode currently rewrites this packet's weapon byte to 24
+			// before we ever see it (protection/packets.inc) precisely to get
+			// past the vanilla-only check; this makes that workaround optional
+			// rather than load-bearing.
+			if (!isWeaponShootableFixed(bulletSync.WeaponID))
 			{
 				return false; // They're sending data for a weapon that doesn't shoot
 			}

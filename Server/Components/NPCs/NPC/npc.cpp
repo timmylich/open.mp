@@ -174,6 +174,27 @@ NPC::NPC(NPCComponent* component, IPlayer* playerPtr)
 	passengerSync_.Position = initialPosition;
 	passengerSync_.HealthArmour = { 100.0f, 0.0f };
 	passengerSync_.DriveBySeatAdditionalKeyWeapon = 0;
+
+	// BUGFIX (main-repo, not a submodule file): initial values for aim sync
+	// values. footSync_/driverSync_/passengerSync_ above were all explicitly
+	// initialised here, but aimSync_/prevAimSync_ were not - and
+	// NetCode::Packet::PlayerAimSync is a plain struct with no default member
+	// initialisers, so every one of its fields started out as whatever
+	// happened to be on the heap. That garbage went straight out over the
+	// wire: sendAimSync() writes aimSync_ verbatim, and it is reachable before
+	// any code has computed a real value (updateAim() only ever assigns
+	// CamFrontVector/CamMode, and CamPos only gets a real value once the NPC
+	// aims at something via updateAimData()). Confirmed on a live server by an
+	// external anticheat (Rakcheat) logging a taxi NPC's CamFrontVector as
+	// ~4.1e28 / -9.8e28 and flagging it every single tick for the NPC's whole
+	// session, entirely independently of what the NPC was doing.
+	aimSync_.CamMode = 0;
+	aimSync_.CamFrontVector = { 0.0f, 0.0f, 0.0f };
+	aimSync_.CamPos = initialPosition;
+	aimSync_.AimZ = 0.0f;
+	aimSync_.ZoomWepState = 0; // union: also zeroes CamZoom + WeaponState
+	aimSync_.AspectRatio = 0;
+	prevAimSync_ = aimSync_;
 }
 
 NPC::~NPC()
@@ -2076,6 +2097,17 @@ void NPC::updateAim()
 		aimSync_.CamMode = 0;
 		// Convert the player angle to radians
 
+		// BUGFIX (main-repo, not a submodule file): keep CamPos tracking the
+		// NPC. It is written verbatim into every aim-sync packet
+		// (sendAimSync()), but the only other place that assigns it is
+		// updateAimData(), which runs solely when the NPC is aiming at
+		// something. An NPC that never aims - a taxi driver, a fakeplayer -
+		// therefore reported a camera position that never moved from wherever
+		// it was left (before the constructor fix above: uninitialised
+		// memory), while its foot sync said it was walking across the map.
+		// Same expression updateAimData() uses, so the two paths agree.
+		aimSync_.CamPos = getPosition() + aimOffsetFrom_;
+
 		float angle = glm::radians(player_->getRotation().ToEuler().z);
 		// Calculate the camera target
 		// BUGFIX (main-repo, not a submodule file): the Y component read
@@ -3042,8 +3074,16 @@ void NPC::tick(Microseconds elapsed, TimePoint now)
 
 			if (duration_cast<Milliseconds>(now - lastAimSyncUpdate_).count() > npcComponent_->getAimSyncRate())
 			{
-				sendAimSync();
+				// BUGFIX (main-repo, not a submodule file): compute, then
+				// send. These two calls used to be the other way round, so
+				// every aim-sync packet carried the values computed one tick
+				// earlier - and the very first one carried whatever aimSync_
+				// held before anything had computed it at all (see the
+				// constructor). Ordering it this way also means CamPos (set in
+				// updateAim() above) matches the foot sync sent in the same
+				// tick instead of lagging a tick behind it.
 				updateAim();
+				sendAimSync();
 
 				lastAimSyncUpdate_ = now;
 			}
