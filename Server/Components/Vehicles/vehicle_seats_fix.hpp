@@ -94,18 +94,11 @@ inline bool getVehicleModelInfoFixed(int model, VehicleModelInfoType type, Vecto
 		return true;
 	}
 
-	switch (type)
-	{
-	case VehicleModelInfo_FrontSeat:
-		out = Vector3(0.5f, 0.0f, -0.2f);
-		return true;
-	case VehicleModelInfo_RearSeat:
-		out = Vector3(0.5f, -1.0f, -0.2f);
-		return true;
-	default:
-		out = Vector3(0.0f, 0.0f, 0.0f);
-		return true;
-	}
+	// Per user request: reuse model 400's (Landstallion) real, calibrated
+	// entry - an ordinary 4-door sedan - instead of hand-picked generic
+	// numbers. isValidVehicleModel(400) is always true, so this recurses
+	// exactly once and always succeeds.
+	return Impl::getVehicleModelInfo(400, type, out);
 }
 
 /*

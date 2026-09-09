@@ -2078,8 +2078,27 @@ void NPC::updateAim()
 
 		float angle = glm::radians(player_->getRotation().ToEuler().z);
 		// Calculate the camera target
+		// BUGFIX (main-repo, not a submodule file): the Y component read
+		// aimSync_.CamPos.z instead of aimSync_.CamPos.y - by itself just a
+		// wrong-axis offset, but combined with the subtraction below it broke
+		// this component's cancellation. X and Z both correctly reduce to
+		// (CamPos.<axis> +/- small delta) - CamPos.<axis> = small delta,
+		// independent of whatever CamPos itself holds (garbage or not) - Y
+		// used .z on the way in but .y on the way out, so instead of
+		// cancelling it produced (CamPos.z - CamPos.y) + delta. CamPos is
+		// only ever set from real NPC state (updateAimData()/spawn), never
+		// explicitly zero-initialised, so for any NPC that reaches this
+		// "not aiming" branch before its first real aim update, CamPos.y is
+		// uninitialised stack memory - leaked into every AimSync packet's Y
+		// component from then on, every tick, for the NPC's whole session.
+		// Confirmed via a live server log: Rakcheat (anticheat) flagging a
+		// taxi-job NPC's CamFrontVector.y as ~7.14e34 on essentially every
+		// tick well before and during a vehicle-entry attempt - a constant,
+		// per-tick stream of garbage is a far more direct explanation for
+		// NPCs getting kicked/disconnected than the vehicle-entry-specific
+		// fixes above, and isn't specific to custom vehicle models at all.
 		Vector3 vecTarget(aimSync_.CamPos.x - glm::sin(angle) * 0.2f,
-			aimSync_.CamPos.z + glm::cos(angle) * 0.2f,
+			aimSync_.CamPos.y + glm::cos(angle) * 0.2f,
 			aimSync_.CamPos.z);
 
 		// Calculate the camera front vector
