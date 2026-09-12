@@ -1609,6 +1609,19 @@ bool NPC::putInVehicle(IVehicle& vehicle, uint8_t seat)
 	vehicleToEnter_ = nullptr;
 	vehicleSeatToEnter_ = SEAT_NONE;
 
+	// BUGFIX (main-repo, not a submodule file): a move in progress has to end
+	// here too. Nothing else clears moving_ on this path, so an NPC that was still
+	// walking when the script called NPC_PutInVehicle() stayed "moving" for the
+	// whole ride: tick() keeps calling advance() for it, advance() keeps walking
+	// position_ towards a target the NPC can no longer reach on foot, and the
+	// moment that target happens to fall inside stopRange_ (or one step of it)
+	// advance() fires onNPCFinishMove for a seated passenger. Scripts treat that
+	// event as "arrived where I sent you", so a taxi NPC was silently ejected
+	// from the moving car mid-trip and then destroyed - it looked like the NPC
+	// just quit. The forced-entry path is the common one in practice: gamemodes
+	// fall back to NPC_PutInVehicle() when NPC_EnterVehicle() times out.
+	stopMove();
+
 	setPositionHandled(vehicle.getPosition(), true);
 	vehicle.putPlayer(*player_, seat);
 	vehicle_ = &vehicle;
