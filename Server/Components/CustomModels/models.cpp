@@ -24,6 +24,10 @@ static auto rUri = std::regex("[A-Za-z0-9-._~:/?#\\[\\]@!$&'()*+,;=]+"); // very
 
 using namespace Impl;
 
+// Raised from SDK's 30000 / -30000 without touching the SDK submodule.
+constexpr int MAX_CUSTOM_SKIN_ID_EXT = 40000;
+constexpr int MIN_CUSTOM_OBJECT_ID_EXT = -40000;
+
 struct ModelFile
 {
 	String name;
@@ -604,9 +608,9 @@ public:
 			return false;
 		}
 
-		if (type == ModelType::Skin && !(id >= MIN_CUSTOM_SKIN_ID && id <= MAX_CUSTOM_SKIN_ID))
+		if (type == ModelType::Skin && !(id >= MIN_CUSTOM_SKIN_ID && id <= MAX_CUSTOM_SKIN_ID_EXT))
 			return false;
-		else if (type == ModelType::Object && !(id >= MIN_CUSTOM_OBJECT_ID && id <= MAX_CUSTOM_OBJECT_ID))
+		else if (type == ModelType::Object && !(id >= MIN_CUSTOM_OBJECT_ID_EXT &&id <= MAX_CUSTOM_OBJECT_ID))
 			return false;
 		else if (baseModels.find(id) != baseModels.end())
 		{
